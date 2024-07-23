@@ -66,6 +66,7 @@ filestart=dt(filestart_ini.year,filestart_ini.month,filestart_ini.day+1)
 filestart=dt.combine(filestart.date(),filestart_ini.time())
 eventend=dt.combine(filestart.date(),eventon.time())
 eventendn=(eventend-filestart_ini).total_seconds()
+# Nx600 ms time window with 1 second boundary condition
 n_end1 = int((eventendn+1)*fs_ini)
 n_start1 = n_end1-int((0.6*N)*fs_ini+2*fs_ini)
 
@@ -77,6 +78,7 @@ filestart=dt(filestart_ini.year,filestart_ini.month,filestart_ini.day+1)
 filestart=dt.combine(filestart.date(),filestart_ini.time())
 eventend=dt.combine(filestart.date(),eventon.time())
 eventendn=(eventend-filestart_ini).total_seconds()
+# Nx600 ms time window with 1 second boundary condition
 n_end2 = int((eventendn+1)*fs_ini)
 n_start2 = n_end2-int((0.6*N)*fs_ini+2*fs_ini)
 
@@ -86,7 +88,7 @@ fs=512
 q=int(fsold/fs)
 print(f'---> Downsampling from {fsold} to {fs} Hz...')
 
-# Cut raw signal  
+# Cut raw signal to get Nx600ms time window
 n_e = int(0.6*N*fs+fs)
 n_s = int(fs)
 
@@ -133,6 +135,7 @@ func_conn_ar_sd = np.zeros((num_steps_EC,num_step_H),dtype=np.float32) # seizure
 mean_fc_dbs = np.zeros((num_step_H),dtype=np.float32) # day before seizure
 mean_fc_sd = np.zeros((num_step_H),dtype=np.float32) # seizure day
 
+# Iterations to calculate centrality entropy
 for i in range(num_step_H):
     
     ##################################################################
@@ -156,9 +159,9 @@ for i in range(num_step_H):
     y=y.astype(np.float32)
     y=y[:,n_s:n_e]
     
-    # Eigenvector centrality
+    # iterations to calculate eigenvectors centrality every 600 ms
     for j in range(num_steps_EC):        
-        y_600ms = y[:,int(fs*j*number_seconds):int(fs*(j+1)*number_seconds)]
+        y_600ms = y[:,int(fs*j*number_seconds):int(fs*(j+1)*number_seconds)] # read 600ms of signal
         corr_matrix = np.corrcoef(y_600ms)    
         corr_matrix = abs(corr_matrix)
                    
@@ -236,9 +239,9 @@ for i in range(num_step_H):
     y=y.astype(np.float32)
     y=y[:,n_s:n_e]
     
-    ###### Eigenvector centrality
+    ###### # iterations to calculate eigenvectors centrality every 600 ms
     for j in range(num_steps_EC):        
-        y_600ms = y[:,int(fs*j*number_seconds):int(fs*(j+1)*number_seconds)]
+        y_600ms = y[:,int(fs*j*number_seconds):int(fs*(j+1)*number_seconds)] # read 600ms of signal
         corr_matrix = np.corrcoef(y_600ms)    
         corr_matrix = abs(corr_matrix)
                
@@ -365,6 +368,7 @@ eventbas=dt.combine(filestart_ini.date(),eventbaseline.time())
 eventbasn=(eventbas-filestart_ini).total_seconds()
 fs_ini=f.info['sfreq']
 Nc_all=len(selectContactsIndices_all)
+# define 5 minutes baseline time window
 n_end_bas = int((eventbasn)*fs_ini)
 n_start_bas = n_end_bas-int(60*5*fs_ini)
 channellabels=[]
@@ -428,12 +432,14 @@ filestart=dt(filestart_ini.year,filestart_ini.month,filestart_ini.day+1)
 filestart=dt.combine(filestart.date(),filestart_ini.time())
 eventend=dt.combine(filestart.date(),eventon.time())
 eventendn=(eventend-filestart_ini).total_seconds()
+# 60 seconds time window with 0.5 second boundary condition
 n_end = int((eventendn+0.5)*fs_ini)
 n_start = n_end-int(61*fs_ini)
 fsold=fs_ini
 fs=512
 q=int(fsold/fs)
 print(f'---> Downsampling from {fsold} to {fs} Hz...')
+# 60 seconds time window
 n_e = int(60.5*fs)
 n_s = int(0.5*fs)
 readcontacts_all=[selectContactsIndices_power[i] for i in range(Nc_all)]
@@ -468,7 +474,7 @@ for k in range(minutes):
     n_end = n_start+int(fs_ini)
     n_start = n_end-int(61*fs_ini)
 
-### ECG
+### EKG
 # initial conditions
 selectallContacts_ecg='''
 EKG L: 1
@@ -480,11 +486,12 @@ n_start = n_end-int(61*fs_ini)
 fsold=fs_ini
 fs=512
 q=int(fsold/fs)
+# 60 seconds time window
 n_e = int(60.5*fs)
 n_s = int(0.5*fs)
 readcontacts_ecg=[selectContactsIndices_ecg[i] for i in range(Nc_ecg)]
-hr=np.zeros((minutes),dtype=np.float32)
 
+# read 60 seconds of EKG signal
 ecg = np.zeros((minutes*60*fs),dtype=np.float32)
 for k in range(minutes):
     # select day
@@ -503,7 +510,7 @@ for k in range(minutes):
 rtol=0.05 # extra tolerance at either side of the window to avoid -3dB at specified freqs
 N=4
 # fll,fhh=[0.2,40]
-fll,fhh=[60,90]
+fll,fhh=[60,90] # band pass filter
 y = ecg 
 # Remove AC noise (50 Hz and multiples)
 x=y
@@ -516,7 +523,7 @@ y=y.astype(np.float32)
 sos = signal.butter(N, [fll*(1-rtol),fhh*(1+rtol)], btype='bandpass',fs=fs, output='sos')
 ecg_f = signal.sosfiltfilt(sos, y, axis=-1)
 
-# computing heart rate (count picks QRS complex per minute)
+# computing heart rate (count R-picks per minute)
 picks = np.zeros((minutes),dtype=np.float32)
 for k in range(minutes):
     c_picks = 0
@@ -525,11 +532,12 @@ for k in range(minutes):
     ecg_f_deriv2 = np.power(ecg_f_deriv,2)    
     i_act = 0
     i_ant = 0
-    i_act_acum = 0    
+    i_act_acum = 0
+    # remove artifacts
     for i in range(np.size(ecg_f_deriv2)):
         if ecg_f_deriv2[i] > 5*np.mean(ecg_f_deriv2) and i>j:
             c_picks += 1
-            j = i + 256
+            j = i + 256 # do not consider peaks less than 0.5 seconds
             i_act = i - i_ant
             i_act = (i_act/fs)*60
             i_act_acum += i_act
