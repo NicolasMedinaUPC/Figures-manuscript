@@ -67,6 +67,7 @@ filestart=dt(filestart_ini.year,filestart_ini.month,filestart_ini.day+1)
 filestart=dt.combine(filestart.date(),filestart_ini.time())
 eventend=dt.combine(filestart.date(),eventon.time())
 eventendn=(eventend-filestart_ini).total_seconds()
+# Nx600 ms time window with 1 second boundary condition
 n_end1 = int((eventendn+1)*fs_ini)
 n_start1 = n_end1-int((0.6*N)*fs_ini+2*fs_ini)
 
@@ -78,6 +79,7 @@ filestart=dt(filestart_ini.year,filestart_ini.month,filestart_ini.day+1)
 filestart=dt.combine(filestart.date(),filestart_ini.time())
 eventend=dt.combine(filestart.date(),eventon.time())
 eventendn=(eventend-filestart_ini).total_seconds()
+# Nx600 ms time window with 1 second boundary condition
 n_end2 = int((eventendn+1)*fs_ini)
 n_start2 = n_end2-int((0.6*N)*fs_ini+2*fs_ini)
 
@@ -87,7 +89,7 @@ fs=512
 q=int(fsold/fs)
 print(f'---> Downsampling from {fsold} to {fs} Hz...')
 
-# Cut raw signal  
+# Cut raw signal to get Nx600ms time window
 n_e = int(0.6*N*fs+fs)
 n_s = int(fs)
 
@@ -126,7 +128,7 @@ EC_ar_sd = np.zeros((Nc_all,num_steps_EC,num_step_H),dtype=np.float32) # seizure
 func_conn_ar_dbs = np.zeros((num_steps_EC,num_step_H),dtype=np.float32) # day before seizure
 func_conn_ar_sd = np.zeros((num_steps_EC,num_step_H),dtype=np.float32) # seizure day
 
-# channels of each electrodo for bipolar reference
+# number of channels of each electrodo for bipolar reference
 electrode_range = np.array([7,10,8,10,15,15,15,8,8,10,14,15,5,18,14])
 
 for i in range(num_step_H):
@@ -169,9 +171,9 @@ for i in range(num_step_H):
     y=y.astype(np.float32)
     y=y[:,n_s:n_e]
     
-    # Eigenvector centrality
+    # iterations to calculate eigenvectors centrality every 600 ms
     for j in range(num_steps_EC):        
-        y_600ms = y[:,int(fs*j*number_seconds):int(fs*(j+1)*number_seconds)]
+        y_600ms = y[:,int(fs*j*number_seconds):int(fs*(j+1)*number_seconds)] # read 600ms of signal
         corr_matrix = np.corrcoef(y_600ms)    
         corr_matrix = abs(corr_matrix)
                    
@@ -266,9 +268,9 @@ for i in range(num_step_H):
     y=y.astype(np.float32)
     y=y[:,n_s:n_e]
     
-    ###### Eigenvector centrality
+    ###### iterations to calculate eigenvectors centrality every 600 ms
     for j in range(num_steps_EC):        
-        y_600ms = y[:,int(fs*j*number_seconds):int(fs*(j+1)*number_seconds)]
+        y_600ms = y[:,int(fs*j*number_seconds):int(fs*(j+1)*number_seconds)] # read 600ms of signal
         corr_matrix = np.corrcoef(y_600ms)    
         corr_matrix = abs(corr_matrix)
                
@@ -345,8 +347,8 @@ for i in range(num_step_H):
 ### Cluster by centrality
 N = len(N_ar)
 Nc_all = len(EC_ar_dbs)
-EC_sd_dbs = np.zeros((Nc_all,np.sum(N_ar)*2),dtype=np.float32)
-fc_sd_dbs = np.zeros((np.sum(N_ar)*2),dtype=np.float32)
+EC_sd_dbs = np.zeros((Nc_all,np.sum(N_ar)*2),dtype=np.float32) # Eigenvectors centrality of both days
+fc_sd_dbs = np.zeros((np.sum(N_ar)*2),dtype=np.float32) # Functional connectivity of both days
 # concatenate both days
 t_ar = 0
 for i in range(N):
@@ -354,7 +356,7 @@ for i in range(N):
     EC_sd_dbs[:,t_ar+np.sum(N_ar):t_ar+np.sum(N_ar)+N_ar[i]] = EC_ar_sd[:,:N_ar[i],i]
     fc_sd_dbs[t_ar:t_ar+N_ar[i]] = fc_ar_dbs[:N_ar[i],i]
     fc_sd_dbs[t_ar+np.sum(N_ar):t_ar+np.sum(N_ar)+N_ar[i]] = fc_ar_sd[:N_ar[i],i]
-    t_ar += N_ar[i]
+    t_ar += N_ar[i] # samples without artifacts
 # k-means
 data = EC_sd_dbs.T
 # Define the number of clusters
@@ -417,7 +419,7 @@ for k in range(n_states):
             l = labels_ind[j+t_ar]
             if l == k:
                 p_dbs[i,k] += 1
-        p_dbs[i,k] /= N_ar[i] # probability
+        p_dbs[i,k] /= N_ar[i] # probability of day before seizure
         t_ar += N_ar[i]
     # seizure day
     t_ar = int(np.size(labels_ind)/2)
@@ -425,7 +427,7 @@ for k in range(n_states):
         for j in range (N_ar[i]):
             l = labels_ind[j+t_ar]
             if l == k:
-                p_sd[i,k] += 1 # probability
+                p_sd[i,k] += 1 # probability of seizure day
         p_sd[i,k] /= N_ar[i]
         t_ar += N_ar[i]
 
