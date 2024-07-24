@@ -31,27 +31,17 @@ x1 = np.array([pw_dbs[300-20*h:],pw_sd[300-20*h:]]) # power
 y1 = np.array([p_dbs[300-20*h:,0],p_sd[300-20*h:,0]]) # HCS probability
 
 # Bootstrapping
-n_days = 2
-t = 5 # 20->1h
-r2_0 = np.zeros(n_days)
-r2_1 = np.zeros((n_days,int(h*20/t)), dtype=np.float32)
-t = 20*8 # 20->1h
-for i in range(n_days):
-    x = x1[i,:].reshape((-1, 1))
-    y = y1[i,:].reshape((-1, 1))
-    model = LinearRegression()
-    model.fit(x, y)
-    r2_0[i] = model.score(x, y)
-r2_dbs_mean = r2_0[0]
-r2_sd_mean = r2_0[1]
+n_days = 2 # number of days
+w1 = 5 # 15 minutes time window
+r2_1 = np.zeros((n_days,int(h*20/w1)), dtype=np.float32)
 
 for i in range(n_days):
-    for j in range(int(h*20/t)):
-        x = x1[i,j*t:(j+1)*t].reshape((-1, 1))
-        y = y1[i,j*t:(j+1)*t].reshape((-1, 1))
+    for j in range(int(h*20/w1)):
+        x = x1[i,j*w1:(j+1)*w1].reshape((-1, 1))
+        y = y1[i,j*w1:(j+1)*w1].reshape((-1, 1))
         model = LinearRegression()
         model.fit(x, y)
-        r2_1[i,j] = model.score(x, y)
+        r2_1[i,j] = model.score(x, y) # R-squared
 r2_dbs_mean = np.mean(r2_1[0,:])
 r2_sd_mean = np.mean(r2_1[1,:])
 r2_dbs_std = np.std(r2_1[0,:])
@@ -61,7 +51,7 @@ day = [i+1 for i in range(n_days)]
 fig, ax = plt.subplots()
 ax.errorbar(2, r2_sd_mean, r2_sd_std, fmt='o', linewidth=3, capsize=6, color='red', label='Seizure day')
 ax.errorbar(1, r2_dbs_mean, r2_dbs_std, fmt='o', linewidth=3, capsize=6, color='blue', label='Day before seizure')
-# ax.set_title("R\u00b2 [HCS probability - Power] \n("+str(h)+" hours before seizure)")
+ax.set_title("R\u00b2 [HCS probability - Power] \n("+str(h)+" hours before seizure)")
 # ax.set_title("R\u00b2 [HCS probability - Heart rate] \n("+str(h)+" hours before seizure)")
 # ax.set_title("R\u00b2 [HCS probability - Functional connectivity] \n("+str(h)+" hours before seizure)")
 # ax.set_title("R\u00b2 [HCS probability - Centrality] \n("+str(h)+" hours before seizure)")
@@ -71,11 +61,11 @@ ax.set_ylabel("Coefficient of determination [R\u00b2]")
 ax.yaxis.set_tick_params()
 ax.set_xticklabels(['','','Day before seizure','Seizure day'])
 
-#%% Spearman correlation
+#%% Spearman correlation between HCS probability and other variable
 
 h=9.5 # number of hours
-N=30
-n_corr = np.size(p_HCS_sd)-N+1
+N=30 # time window samples 
+n_corr = np.size(p_HCS_sd)-N+1 # correlation samples
 Spearman_corr_sd = np.zeros(n_corr)
 Spearman_corr_dbs = np.zeros(n_corr)
 Spearman_pvalue_sd = np.zeros(n_corr)
@@ -115,6 +105,7 @@ for i in range(n_corr):
     # Spearman_corr_dbs[i] = corr_matrix[0]
     # Spearman_pvalue_dbs[i] = corr_matrix[1]
 
+# moving average
 window = 5
 average_sd = []
 average_dbs = []
