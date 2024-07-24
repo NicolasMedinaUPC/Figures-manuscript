@@ -25,8 +25,8 @@ from sklearn.linear_model import LinearRegression
 ### Clustering by centrality
 N = len(N_ar)
 Nc_all = len(EC_ar_dbs)
-EC_sd_dbs = np.zeros((Nc_all,np.sum(N_ar)*2),dtype=np.float32)
-fc_sd_dbs = np.zeros((np.sum(N_ar)*2),dtype=np.float32)
+EC_sd_dbs = np.zeros((Nc_all,np.sum(N_ar)*2),dtype=np.float32) # Eigenvectors centrality of both days
+fc_sd_dbs = np.zeros((np.sum(N_ar)*2),dtype=np.float32)  # Functional connectivity of both days
 # concatenate both days
 t_ar = 0
 for i in range(N):
@@ -34,7 +34,7 @@ for i in range(N):
     EC_sd_dbs[:,t_ar+np.sum(N_ar):t_ar+np.sum(N_ar)+N_ar[i]] = EC_ar_sd[:,:N_ar[i],i]
     fc_sd_dbs[t_ar:t_ar+N_ar[i]] = fc_ar_dbs[:N_ar[i],i]
     fc_sd_dbs[t_ar+np.sum(N_ar):t_ar+np.sum(N_ar)+N_ar[i]] = fc_ar_sd[:N_ar[i],i]
-    t_ar += N_ar[i]
+    t_ar += N_ar[i] # samples without artifacts
 # k-means
 data = EC_sd_dbs.T
 # Define the number of clusters
@@ -53,6 +53,7 @@ cent_ord = np.array(cent_ord)
 ind_cent = np.zeros((12))
 for i in range (12):
     ind_cent[i] = np.array(np.where(centers == cent_ord[i]))
+
 # sort labels by centrality    
 n = np.size(labels)
 labels_ind = np.zeros(n, dtype=np.int32)
@@ -87,8 +88,8 @@ for i in range (n):
 
 n_states = 12
 n = 300
-p_dbs = np.zeros((n,n_states), dtype=np.float32)
-p_sd = np.zeros((n,n_states), dtype=np.float32)
+p_dbs = np.zeros((n,n_states), dtype=np.float32) # day before seizure probability
+p_sd = np.zeros((n,n_states), dtype=np.float32) # seizure day probability
 for k in range(n_states):
     # day before seizure
     t_ar = 0
@@ -98,16 +99,16 @@ for k in range(n_states):
             if l == k:
                 p_dbs[i,k] += 1
         p_dbs[i,k] /= N_ar[i] # probability
-        t_ar += N_ar[i]
+        t_ar += N_ar[i] # samples without artifacts
     # seizure day
     t_ar = int(np.size(labels_ind)/2)
     for i in range (n):
         for j in range (N_ar[i]):
             l = labels_ind[j+t_ar]
             if l == k:
-                p_sd[i,k] += 1 # probability
-        p_sd[i,k] /= N_ar[i]
-        t_ar += N_ar[i]
+                p_sd[i,k] += 1 
+        p_sd[i,k] /= N_ar[i] # probability
+        t_ar += N_ar[i # samples without artifacts
 
 #%% R-squared of each state to explain entropy drop
 
@@ -156,4 +157,4 @@ for i in range(n2-1):
         k += 1
     if i == n2-2:
         label[k] = cluster[i]
-label[t1-1] = cluster[n2-1]
+label[t1-1] = cluster[n2-1] # indexes where the difference is significant
