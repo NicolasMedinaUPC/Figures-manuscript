@@ -28,8 +28,8 @@ f = mne.io.read_raw_edf(filename)
 
 # Define initial conditions
 horas = 15 # 15h preictal
-N = 300 # samples to compute entropy
-num_step_H = int((60/(0.6*N/60))*horas)
+N = 300 # samples to compute centrality entropy
+num_step_H = int((60/(0.6*N/60))*horas) # number of iterations to compute centrality entropy
 
 fs_ini=f.info['sfreq'] # sampling frequency
 signalLabels=f.ch_names # channels labels
