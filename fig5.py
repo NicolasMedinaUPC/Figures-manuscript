@@ -11,22 +11,22 @@ from itertools import permutations
 from sklearn.cluster import KMeans
 
 #%% low-dimensional statistical network model
-ord1 = 4
-min3 = 20*(2)
-it_n = 300*(min3)
-step = 0.05
-err1 = 0.01
-err2 = 0.0005
+ord1 = 4 # order
+min3 = 20*(2) # samples for 2 hours before seizure
+it_n = 300*(min3) # iterations for 2 hours before seizure
+step = 0.05 # mean connectivity step
+err1 = 0.01 # mean connectivity error
+err2 = 0.0005 # mean centrality error
 # define mean connectivity
-thr1, thr2 = 0.20-err1, 0.20+err1
-# thr1, thr2 = 0.25-err1, 0.25+err1
+thr1, thr2 = 0.20-err1, 0.20+err1 # [-4,-2] hours before a seizure
+# thr1, thr2 = 0.25-err1, 0.25+err1 # [-2,0] hours before a seizure
 # define mean centrality
-thr_cent1, thr_cent2 = 0.4825-err2, 0.4825+err2 # 
-# thr_cent1, thr_cent2 = 0.4835-err2, 0.4835+err2 # 
-nn = 300
+thr_cent1, thr_cent2 = 0.4825-err2, 0.4825+err2 # day before a seizure and [-4,-2] hours on seizure day
+# thr_cent1, thr_cent2 = 0.4835-err2, 0.4835+err2 # [-2,0] hour on seizure day
+nn = 300 # samples for dividing cumulative connectivity and centrality
 conn_mean = np.zeros(min3)
 centrality = np.zeros(min3)
-cmm_t = np.zeros((ord1,ord1,it_n))
+cmm_t = np.zeros((ord1,ord1,it_n)) # total covariance matrices 
 cent = np.zeros(nn*min3,dtype=np.float32)
 
 for a in range(min3):
@@ -44,7 +44,7 @@ for a in range(min3):
                 while(eigv_pos==False):
                     for i in range(n):
                         for j in range(n):                            
-                            # 0.2->factor=0.245, 0.25->factor=0.32
+                            # mean connectivity: 0.2->factor=0.245, 0.25->factor=0.32
                             # if i != j: cm1[i,j] = np.random.randn()*0.245
                             if i != j: cm1[i,j] = np.random.randn()*0.32                                               
                             if j < i: cm1[i,j] = cm1[j,i]           
@@ -73,8 +73,8 @@ for a in range(min3):
             va_ac += vec_aux_mean        
         va_ac /= nn
         cent_ac /= nn    
-    conn_mean[a] = va_ac
-    centrality[a] = cent_ac
+    conn_mean[a] = va_ac # mean connectivity
+    centrality[a] = cent_ac # mean centrality
 
 #%% join connectivity and centrality
 cm_dbs = np.concatenate((cm_dbs1,cm_dbs2),axis=2) # covariance matrices calculated previously
